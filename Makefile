@@ -1,7 +1,7 @@
 NAME = ft_mat
 
 CC = cc
-CFLAGS = -Wall -Wextra -Werror
+CFLAGS = -g -fsanitize=address
 
 SRCS = ft_mat.c
 OBJS = $(SRCS:.c=.o)

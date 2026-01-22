@@ -1,6 +1,5 @@
 #include "ft_mat.h"
 
-// Create a matrix of height row and width col, all elements initialized to 0.0.
 mat	*mat_new(unsigned int num_rows, unsigned int num_cols)
 {
 	mat	*m;
@@ -151,7 +150,7 @@ void	mat_printf(mat *m, const char *d_fmt)
 
 void	mat_print(mat *m)
 {
-	mat_printf(m, "%.1lf  ");
+	mat_printf(m, "%.1lf\t");
 }
 
 mat	*mat_col_get(mat *m, unsigned int col)
@@ -234,6 +233,30 @@ mat	*mat_col_mult(mat *m, unsigned int col, double num)
 
 	r = mat_cpy(m);
 	if (!mat_col_mult_r(r, col, num))
+	{
+		mat_free(r);
+		return (NULL);
+	}
+	return (r);
+}
+
+mat	*mat_row_addrow_r(mat *m, unsigned int to, unsigned int from,
+		double multiplier)
+{
+	if (to >= m->num_rows || from >= m->num_rows)
+		return (NULL);
+	for (unsigned int i = 0; i < m->num_cols; i++)
+		m->data[to][i] += m->data[from][i] * multiplier;
+	return (m);
+}
+
+mat	*mat_row_addrow(mat *m, unsigned int to, unsigned int from,
+		double multiplier)
+{
+	mat	*r;
+
+	r = mat_cpy(m);
+	if (mat_row_addrow_r(m, to, from, multiplier) == NULL)
 	{
 		mat_free(r);
 		return (NULL);
@@ -359,55 +382,144 @@ mat	*mat_col_swap(mat *m, unsigned int col1, unsigned int col2)
 	return (r);
 }
 
-// mat	*mat_cath(unsigned int mnum, mat **marr)
-// {
-// 	unsigned int	num_cols;
+int	mat_add_r(mat *m1, mat *m2)
+{
+	if (!mat_eqdim(m1, m2))
+		return (0);
+	for (unsigned int i = 0; i < m1->num_rows; i++)
+	{
+		for (unsigned int j = 0; j < m1->num_cols; j++)
+			m1->data[i][j] += m2->data[i][j];
+	}
+	return (1);
+}
 
-// 	if (mnum == 0 || !marr)
-// 		return (NULL);
-// 	if (mnum == 1)
-// 		return (mat_cpy(marr[0]));
-// 	num_cols = marr[0]->num_cols;
-// 	for (unsigned int i = 1; i < mnum; i++)
-// 	{
-// 		if (!marr[mnum] || marr[mnum]->num_cols != num_cols)
-// 			return (NULL);
-// 	}
-// }
+mat	*mat_add(mat *m1, mat *m2)
+{
+	mat	*r;
+
+	r = mat_cpy(m1);
+	if (!mat_add_r(r, m2))
+	{
+		mat_free(r);
+		return (NULL);
+	}
+	return (r);
+}
+
+int	mat_sub_r(mat *m1, mat *m2)
+{
+	if (!mat_eqdim(m1, m2))
+		return (0);
+	for (unsigned int i = 0; i < m1->num_rows; i++)
+	{
+		for (unsigned int j = 0; j < m1->num_cols; j++)
+			m1->data[i][j] -= m2->data[i][j];
+	}
+	return (1);
+}
+
+mat	*mat_sub(mat *m1, mat *m2)
+{
+	mat	*r;
+
+	r = mat_cpy(m1);
+	if (!mat_sub_r(r, m2))
+	{
+		mat_free(r);
+		return (NULL);
+	}
+	return (r);
+}
+
+mat	*mat_dot(mat *m1, mat *m2)
+{
+	mat	*r;
+
+	if (m1->num_cols != m2->num_rows)
+		return (NULL);
+	r = mat_new(m1->num_rows, m2->num_cols);
+	for (unsigned int i = 0; i < r->num_rows; i++)
+	{
+		for (unsigned int j = 0; j < r->num_cols; j++)
+		{
+			for (unsigned int k = 0; k < m1->num_cols; k++)
+				r->data[i][j] += m1->data[i][k] + m2->data[k][j];
+		}
+	}
+	return (r);
+}
+
+int	_mat_pivot_idx(mat *m, unsigned int row, unsigned int col)
+{
+	for (unsigned int i = row; i < m->num_rows; i++)
+	{
+		if (fabs(m->data[i][col]) > MIN_COEF)
+			return (i);
+	}
+	return (-1);
+}
+
+int _mat_pivot_max_idx(mat *m, unsigned int row, unsigned int col)
+{
+	int max;
+}
+
+mat	*mat_ref(mat *m)
+{
+	mat	*r;
+
+	int i, j, k, pivot;
+	r = mat_cpy(m);
+	i = 0, j = 0;
+	while (i < r->num_rows && j < r->num_cols)
+	{
+		// Find the pivot where row i col j is non zero
+		pivot = _mat_pivot_idx(r, i, j);
+		if (pivot == -1)
+		{
+			j++;
+			continue ;
+		}
+		if (pivot != i)
+			mat_row_swap_r(r, pivot, i);
+		mat_row_mult_r(r, i, 1 / r->data[i][j]);
+		for (k = i + 1; k < r->num_rows; k++)
+		{
+			if (fabs(r->data[k][j]) > MIN_COEF)
+				// Make any value on the same column as the pivot zero
+				mat_row_addrow_r(r, k, i, -(r->data[k][j]));
+		}
+		i++;
+		j++;
+	}
+	return (r);
+}
+
+
 
 int	main(void)
 {
-	mat *m = mat_eye(10);
-
-	mat *n = mat_col_get(m, 2);
-	mat_print(n);
-
-	mat *o = mat_row_get(m, 2);
-	mat_print(o);
-
 	mat *r = mat_rnd(5, 3, 0.0, 10.0);
 	mat_print(r);
 
-	mat_diag_set(r, 5.0);
-	mat_print(r);
+	// mat_print(mat_col_get(r, 2));
+	// mat_print(mat_row_get(r, 2));
+	// mat_print(mat_diag_set(r, 5.0));
+	// mat_print(mat_row_mult(r, 2, 10.0));
+	// mat_print(mat_col_mult(r, 2, 10.0));
+	// mat_print(mat_col_rem(r, 0));
+	// mat_print(mat_row_rem(r, 0));
+	// mat_print(mat_row_swap(r, 0, 1));
+	// mat_print(mat_col_swap(r, 0, 1));
 
-	mat *p = mat_row_mult(r, 2, 10.0);
-	mat_print(p);
-
-	mat *q = mat_col_mult(p, 2, 10.0);
-	mat_print(q);
-
-	mat *s = mat_col_rem(q, 0);
-	mat_print(s);
-
-	mat *t = mat_row_rem(s, 0);
-	mat_print(t);
-
-	mat_row_swap_r(t, 0, 1);
-	mat_print(t);
-
-	mat_col_swap_r(t, 0, 1);
-	mat_print(t);
+	mat *a = mat_rnd(5, 5, 0.0, 10.0);
+	mat *b = mat_rnd(5, 5, 0.0, 10.0);
+	// mat_print(a);
+	// mat_print(b);
+	mat_print(mat_add(a, b));
+	mat_print(mat_sub(a, b));
+	mat_print(mat_ref(a));
 
 	return (0);
 }

@@ -7,6 +7,7 @@
 # include <string.h>
 
 # define RAND_MAX 0x7fffffff
+# define MIN_COEF 0.000000000000001
 
 typedef struct mat_s
 {
