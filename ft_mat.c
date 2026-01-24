@@ -142,7 +142,8 @@ void	mat_printf(mat *m, const char *d_fmt)
 	for (unsigned int i = 0; i < m->num_rows; i++)
 	{
 		for (unsigned int j = 0; j < m->num_cols; j++)
-			fprintf(stdout, d_fmt, m->data[i][j]);
+			fprintf(stdout, d_fmt,
+				m->data[i][j] > MIN_COEF ? m->data[i][j] : 0.0);
 		fprintf(stdout, "\n");
 	}
 	fprintf(stdout, "\n");
@@ -460,11 +461,9 @@ int	_mat_pivot_idx(mat *m, unsigned int row, unsigned int col)
 	return (-1);
 }
 
-int _mat_pivot_max_idx(mat *m, unsigned int row, unsigned int col)
-{
-	int max;
-}
-
+// Reduced Echelon Form (REF) satisfies the following conditions:
+// 1. All rows having only zero entries are at the bottom
+// 2. Leading entry of every non-zero row (pivot) is to the right of the pivot of every row above.
 mat	*mat_ref(mat *m)
 {
 	mat	*r;
@@ -496,12 +495,36 @@ mat	*mat_ref(mat *m)
 	return (r);
 }
 
+// Also called Gauss-Jordan Elimination
+// Built on top of REF, and satisfy extra condition:
+// a given pivot is the only non zero entry in the column
+mat	*mat_rref(mat *m)
+{
+	mat	*r;
 
+	r = mat_ref(m); // get a REF matrix first
+	for (int i = r->num_rows - 1; i >= 0; i--)
+	{
+		for (int j = 0; j < r->num_cols; j++)
+		{
+			// find the bottom pivot
+			if (fabs(r->data[i][j]) > MIN_COEF)
+			{
+				// eliminate pivot column of every row above pivot row
+				for (int k = i - 1; k >= 0; k--)
+					mat_row_addrow_r(r, k, i, -(r->data[k][j]));
+				break ;
+			}
+		}
+	}
+	return (r);
+}
 
 int	main(void)
 {
-	mat *r = mat_rnd(5, 3, 0.0, 10.0);
-	mat_print(r);
+	srand(time(NULL));
+	// mat *r = mat_rnd(5, 3, 0.0, 10.0);
+	// mat_print(r);
 
 	// mat_print(mat_col_get(r, 2));
 	// mat_print(mat_row_get(r, 2));
@@ -513,13 +536,14 @@ int	main(void)
 	// mat_print(mat_row_swap(r, 0, 1));
 	// mat_print(mat_col_swap(r, 0, 1));
 
-	mat *a = mat_rnd(5, 5, 0.0, 10.0);
-	mat *b = mat_rnd(5, 5, 0.0, 10.0);
+	mat *a = mat_rnd(4, 5, 0.0, 10.0);
+	// mat *b = mat_rnd(5, 5, 0.0, 10.0);
 	// mat_print(a);
 	// mat_print(b);
-	mat_print(mat_add(a, b));
-	mat_print(mat_sub(a, b));
+	// mat_print(mat_add(a, b));
+	// mat_print(mat_sub(a, b));
 	mat_print(mat_ref(a));
+	mat_print(mat_rref(a));
 
 	return (0);
 }

@@ -5,6 +5,7 @@
 # include <stdio.h>
 # include <stdlib.h>
 # include <string.h>
+# include <time.h>
 
 # define RAND_MAX 0x7fffffff
 # define MIN_COEF 0.000000000000001
