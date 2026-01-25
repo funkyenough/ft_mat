@@ -21,6 +21,14 @@ typedef struct mat_s
 	int				is_square;
 }					mat;
 
+typedef struct lup_s
+{
+	mat				*L;
+	mat				*U;
+	mat				*P;
+	unsigned int	num_perm;
+}					lup;
+
 mat					*mat_new(unsigned int num_rows, unsigned int num_cols);
 void				mat_free(mat *matrix);
 

@@ -518,6 +518,72 @@ mat	*mat_rref(mat *m)
 	return (r);
 }
 
+// Kind of surprised that Andrei is doing a shallow copy here
+// Ah, because LUP are constructed specifically for LUP Decomposition
+lup	*lup_new(mat *L, mat *U, mat *P, unsigned int num_perm)
+{
+	lup	*r;
+
+	r = malloc(sizeof(lup));
+	if (r == NULL)
+		return (NULL);
+	r->L = L;
+	r->U = U;
+	r->P = P;
+	r->num_perm = num_perm;
+	return (r);
+}
+
+void	lup_free(lup *lu)
+{
+	mat_free(lu->L);
+	mat_free(lu->U);
+	mat_free(lu->P);
+	free(lu);
+}
+
+// Factorize a square matrix into upper and lower matrices
+// ! Purpose yet unknown to me...
+// Assuming that the matrix is not ordered in such a way that it is sorted according to pivot,
+// a separate permutation matrix P is necessary to record what permutation is performed to it.
+lup	*lup_solve(mat *m)
+{
+	double	mult;
+
+	int pivot, num_perm = 0, i = 0, j = 0;
+	mat *L, *U, *P;
+	if (!m->is_square) // LUP cannot be applied on non square matrices
+		return (NULL);
+	L = mat_new(m->num_rows, m->num_cols); // Lower, initilize to 0
+	U = mat_cpy(m);                        // Upper, initialize to copy of m
+	P = mat_eye(m->num_rows);              // Perm matrix init to identity
+	for (j = 0; j < m->num_cols; j++)
+	{
+		// find the maximum element in a given column
+		pivot = _mat_abs_max(U, j);
+		if (fabs(U->data[pivot][j]) < MIN_COEF)
+			return (NULL);
+		if (pivot != j)
+		{
+			mat_row_swap_r(L, pivot, j);
+			mat_row_swap_r(U, pivot, j);
+			mat_row_swap_r(P, pivot, j);
+			num_perm++;
+		}
+		// Now that matrix is sorted, apply factoriation
+		for (i = j + 1; i < m->num_rows; i++)
+		{
+			// Find the value to write to the Lower Matrix
+			mult = U->data[i][j] / U->data[j][j];
+			mat_row_addrow_r(U, i, j, -mult);
+			L->data[i][j] = mult;
+		}
+	}
+	// This is to avoid row swap messing up the diagonal
+	mat_diag_set(L, 1.0);
+	return (lup_new(L, U, P, num_perm));
+}
+
 int	main(void)
 {
 	srand(time(NULL));
@@ -534,14 +600,27 @@ int	main(void)
 	// mat_print(mat_row_swap(r, 0, 1));
 	// mat_print(mat_col_swap(r, 0, 1));
 
-	mat *a = mat_rnd(4, 5, 0.0, 10.0);
+	mat *a = mat_rnd(5, 5, 0.0, 10.0);
 	// mat *b = mat_rnd(5, 5, 0.0, 10.0);
 	// mat_print(a);
 	// mat_print(b);
 	// mat_print(mat_add(a, b));
 	// mat_print(mat_sub(a, b));
-	mat_print(mat_ref(a));
-	mat_print(mat_rref(a));
+	// mat_print(mat_ref(a));
+	// mat_print(mat_rref(a));
+
+	lup *lu = lup_solve(a);
+	if (!lu)
+	{
+		printf("LUP decomposition failed\n");
+		return (1);
+	}
+	mat_print_name("P", lu->P);
+	mat_print_name("A", a);
+	mat_print_name("L", lu->L);
+	mat_print_name("U", lu->U);
+	mat_print_name("PxA", mat_dot(lu->P, a));
+	mat_print_name("LxU", mat_dot(lu->L, lu->U));
 
 	return (0);
 }
