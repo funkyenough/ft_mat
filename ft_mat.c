@@ -453,7 +453,7 @@ mat	*mat_dot(mat *m1, mat *m2)
 		for (unsigned int j = 0; j < r->num_cols; j++)
 		{
 			for (unsigned int k = 0; k < m1->num_cols; k++)
-				r->data[i][j] += m1->data[i][k] + m2->data[k][j];
+				r->data[i][j] += m1->data[i][k] * m2->data[k][j];
 		}
 	}
 	return (r);
