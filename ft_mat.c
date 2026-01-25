@@ -55,14 +55,6 @@ mat	*mat_cpy(mat *m)
 	return (r);
 }
 
-double	rand_internal(double min, double max)
-{
-	double	d;
-
-	d = (double)rand() / ((double)RAND_MAX + 1);
-	return (min + d * (max - min));
-}
-
 mat	*mat_rnd(unsigned int num_rows, unsigned int num_cols, double min,
 		double max)
 {
@@ -72,7 +64,7 @@ mat	*mat_rnd(unsigned int num_rows, unsigned int num_cols, double min,
 	for (unsigned int i = 0; i < num_rows; i++)
 	{
 		for (unsigned int j = 0; j < num_cols; j++)
-			m->data[i][j] = rand_internal(min, max);
+			m->data[i][j] = _rand_internal(min, max);
 	}
 	return (m);
 }
@@ -136,14 +128,24 @@ int	mat_eq(mat *m1, mat *m2, double tolerance)
 	return (1);
 }
 
+// Highlight 1.0 values
 void	mat_printf(mat *m, const char *d_fmt)
 {
+	double	val;
+
 	fprintf(stdout, "\n");
 	for (unsigned int i = 0; i < m->num_rows; i++)
 	{
 		for (unsigned int j = 0; j < m->num_cols; j++)
-			fprintf(stdout, d_fmt,
-				m->data[i][j] > MIN_COEF ? m->data[i][j] : 0.0);
+		{
+			val = fabs(m->data[i][j]);
+			if (fabs(val) < MIN_COEF)
+				fprintf(stdout, COLOR_ZERO);
+			else if (fabs(val - 1.0) < MIN_COEF)
+				fprintf(stdout, COLOR_ONE);
+			fprintf(stdout, d_fmt, val < MIN_COEF ? 0.0 : m->data[i][j]);
+			fprintf(stdout, COLOR_RESET);
+		}
 		fprintf(stdout, "\n");
 	}
 	fprintf(stdout, "\n");
@@ -151,6 +153,12 @@ void	mat_printf(mat *m, const char *d_fmt)
 
 void	mat_print(mat *m)
 {
+	mat_printf(m, "%.1lf\t");
+}
+
+void	mat_print_name(char *name, mat *m)
+{
+	printf("%s", name);
 	mat_printf(m, "%.1lf\t");
 }
 
@@ -449,16 +457,6 @@ mat	*mat_dot(mat *m1, mat *m2)
 		}
 	}
 	return (r);
-}
-
-int	_mat_pivot_idx(mat *m, unsigned int row, unsigned int col)
-{
-	for (unsigned int i = row; i < m->num_rows; i++)
-	{
-		if (fabs(m->data[i][col]) > MIN_COEF)
-			return (i);
-	}
-	return (-1);
 }
 
 // Reduced Echelon Form (REF) satisfies the following conditions:

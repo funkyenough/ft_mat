@@ -3,7 +3,7 @@ NAME = ft_mat
 CC = cc
 CFLAGS = -g -fsanitize=address
 
-SRCS = ft_mat.c
+SRCS = ft_mat.c ft_utils.c
 OBJS = $(SRCS:.c=.o)
 
 all: $(NAME)
