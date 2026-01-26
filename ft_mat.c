@@ -584,6 +584,69 @@ lup	*lup_solve(mat *m)
 	return (lup_new(L, U, P, num_perm));
 }
 
+// Forward substitution
+// Solves L* x = b where L is a lower triangular matrix
+// Starting from the top row (which has only one unknown)
+// we solve each variable and substitute it into the rows below
+mat	*ls_solve_fwd(mat *L, mat *b)
+{
+	double	tmp;
+	mat		*x;
+
+	int i, j;
+	x = mat_new(L->num_rows, 1);
+	for (i = 0; i < L->num_rows; i++)
+	{
+		tmp = b->data[i][0];
+		for (j = 0; j < i; j++)
+			// x->data[j][0] we have already solved
+			// L->data[i][j] is the coefficient (multiplier, the a in aX)
+			// We remove it from tmp one by one until only the var in question is left
+			tmp -= L->data[i][j] * x->data[j][0];
+		x->data[i][0] = tmp / L->data[i][i];
+	}
+	return (x);
+}
+
+// Backward Substitution
+// Similar to Forward substitution
+// except we start from the bottom row last column
+mat	*ls_solve_bck(mat *U, mat *b)
+{
+	double	tmp;
+	mat		*x;
+
+	int i, j;
+	x = mat_new(U->num_rows, 1);
+	for (i = U->num_rows - 1; i >= 0; i--)
+	{
+		tmp = b->data[i][0];
+		for (j = i + 1; j < U->num_cols; j++)
+			tmp -= U->data[i][j] * x->data[j][0];
+		x->data[i][0] = tmp / U->data[i][i];
+	}
+	return (x);
+}
+
+// Given a matrix a and result b, where a * x = b
+// We rewrite
+// P * a * x = P * b
+// L * U * x = P * b
+// L * y = P * b (sub y = U * x)
+// finally solve x
+mat	*ls_solve(lup *lu, mat *b)
+{
+	mat *x, *y, *Pb;
+	if (lu->L->num_rows != b->num_rows || b->num_cols != 1)
+		return (NULL);
+	Pb = mat_dot(lu->P, b);
+	y = ls_solve_fwd(lu->L, Pb);
+	x = ls_solve_bck(lu->U, y);
+	mat_free(Pb);
+	mat_free(y);
+	return (x);
+}
+
 int	main(void)
 {
 	srand(time(NULL));
@@ -601,26 +664,32 @@ int	main(void)
 	// mat_print(mat_col_swap(r, 0, 1));
 
 	mat *a = mat_rnd(5, 5, 0.0, 10.0);
-	// mat *b = mat_rnd(5, 5, 0.0, 10.0);
+	mat *b = mat_rnd(5, 1, 0.0, 10.0);
 	// mat_print(a);
 	// mat_print(b);
-	// mat_print(mat_add(a, b));
-	// mat_print(mat_sub(a, b));
 	// mat_print(mat_ref(a));
 	// mat_print(mat_rref(a));
 
 	lup *lu = lup_solve(a);
-	if (!lu)
-	{
-		printf("LUP decomposition failed\n");
-		return (1);
-	}
+	// if (!lu)
+	// {
+	// 	printf("LUP decomposition failed\n");
+	// 	return (1);
+	// }
 	mat_print_name("P", lu->P);
 	mat_print_name("A", a);
 	mat_print_name("L", lu->L);
 	mat_print_name("U", lu->U);
-	mat_print_name("PxA", mat_dot(lu->P, a));
-	mat_print_name("LxU", mat_dot(lu->L, lu->U));
+	// mat_print_name("PxA", mat_dot(lu->P, a));
+	// mat_print_name("LxU", mat_dot(lu->L, lu->U));
+
+	mat *x = ls_solve(lu, b);
+	mat *Ax = mat_dot(a, x);
+	mat_print_name("Ax", Ax);
+	mat_print_name("b", b);
+	// Somehow MIN_COEF actually returns false
+	mat_eq(Ax, b, MIN_COEF
+			* 10) == 0 ? printf("Ax != b\n") : printf("Ax == b\n");
 
 	return (0);
 }
