@@ -487,11 +487,11 @@ mat	*mat_rref(mat *m)
 
 // Kind of surprised that Andrei is doing a shallow copy here
 // Ah, because LUP are constructed specifically for LUP Decomposition
-lup	*lup_new(mat *L, mat *U, mat *P, unsigned int num_perm)
+mat_lup	*mat_lup_new(mat *L, mat *U, mat *P, unsigned int num_perm)
 {
-	lup	*r;
+	mat_lup	*r;
 
-	r = malloc(sizeof(lup));
+	r = malloc(sizeof(mat_lup));
 	if (r == NULL)
 		return (NULL);
 	r->L = L;
@@ -501,18 +501,18 @@ lup	*lup_new(mat *L, mat *U, mat *P, unsigned int num_perm)
 	return (r);
 }
 
-void	lup_free(lup *lu)
+void	mat_lup_free(mat_lup *lup)
 {
-	mat_free(lu->L);
-	mat_free(lu->U);
-	mat_free(lu->P);
-	free(lu);
+	mat_free(lup->L);
+	mat_free(lup->U);
+	mat_free(lup->P);
+	free(lup);
 }
 
 // Factorize a square matrix into upper and lower matrices
 // Assuming that the matrix is not ordered in such a way that it is sorted according to pivot,
 // a separate permutation matrix P is necessary to record what permutation is performed to it.
-lup	*lup_solve(mat *m)
+mat_lup	*mat_lup_solve(mat *m)
 {
 	double	mult;
 
@@ -547,7 +547,7 @@ lup	*lup_solve(mat *m)
 	}
 	// This is to avoid row swap messing up the diagonal
 	mat_diag_set(L, 1.0);
-	return (lup_new(L, U, P, num_perm));
+	return (mat_lup_new(L, U, P, num_perm));
 }
 
 // Forward substitution
@@ -600,14 +600,14 @@ mat	*ls_solve_bck(mat *U, mat *b)
 // L * U * x = P * b
 // L * y = P * b (sub y = U * x)
 // finally solve x
-mat	*ls_solve(lup *lu, mat *b)
+mat	*ls_solve(mat_lup *lup, mat *b)
 {
 	mat *x, *y, *Pb;
-	if (lu->L->num_rows != b->num_rows || b->num_cols != 1)
+	if (lup->L->num_rows != b->num_rows || b->num_cols != 1)
 		return (NULL);
-	Pb = mat_dot(lu->P, b);
-	y = ls_solve_fwd(lu->L, Pb);
-	x = ls_solve_bck(lu->U, y);
+	Pb = mat_dot(lup->P, b);
+	y = ls_solve_fwd(lup->L, Pb);
+	x = ls_solve_bck(lup->U, y);
 	mat_free(Pb);
 	mat_free(y);
 	return (x);
@@ -618,19 +618,19 @@ mat	*ls_solve(lup *lu, mat *b)
 // Ia[col] = ls_solve(a, I[col])
 // I can now understand why this takes so much time..
 // The O(n) of this current algorithm is
-mat	*mat_inv(lup *lu)
+mat	*mat_inv(mat_lup *lup)
 {
 	unsigned int	dim;
 
 	int i, j;
-	dim = lu->L->num_cols;
+	dim = lup->L->num_cols;
 	mat *inv, *invx, *I, *Ix;
 	inv = mat_sqr(dim);
 	I = mat_eye(dim);
 	for (j = 0; j < dim; j++)
 	{
 		Ix = mat_col_get(I, j);
-		invx = ls_solve(lu, Ix);
+		invx = ls_solve(lup, Ix);
 		for (i = 0; i < invx->num_rows; i++)
 			inv->data[i][j] = invx->data[i][0];
 		mat_free(invx);
@@ -656,16 +656,16 @@ mat	*mat_inv(lup *lu)
 // = 1 * det(U) / (-1)^n
 // Sidenote: given our design of lup_solve, we will never have det(A) = 0
 // because lup would have been null when no pivot exists
-double	mat_det(lup *lu)
+double	mat_det(mat_lup *lup)
 {
 	int		i;
 	double	r;
 	int		sign;
 
-	sign = (lu->num_perm % 2 == 0) ? 1 : -1;
+	sign = (lup->num_perm % 2 == 0) ? 1 : -1;
 	r = 1.0;
-	for (i = 0; i < lu->U->num_rows; i++)
-		r *= lu->U->data[i][i];
+	for (i = 0; i < lup->U->num_rows; i++)
+		r *= lup->U->data[i][i];
 	return (r * sign);
 }
 
@@ -694,26 +694,26 @@ int	main(void)
 	// mat_print(mat_ref(a));
 	// mat_print(mat_rref(a));
 
-	lup *lu = lup_solve(a);
-	// if (!lu)
+	// mat_lup *lup = mat_lup_solve(a);
+	// if (!lup)
 	// {
 	// 	printf("LUP decomposition failed\n");
 	// 	return (1);
 	// }
-	mat_print_name("P", lu->P);
-	mat_print_name("A", a);
-	mat_print_name("L", lu->L);
-	mat_print_name("U", lu->U);
-	// mat_print_name("PxA", mat_dot(lu->P, a));
-	// mat_print_name("LxU", mat_dot(lu->L, lu->U));
+	// mat_print_name("P", lup->P);
+	// mat_print_name("A", a);
+	// mat_print_name("L", lup->L);
+	// mat_print_name("U", lup->U);
+	// mat_print_name("PxA", mat_dot(lup->P, a));
+	// mat_print_name("LxU", mat_dot(lup->L, lup->U));
 
-	// mat *x = ls_solve(lu, b);
+	// mat *x = ls_solve(lup, b);
 	// mat *Ax = mat_dot(a, x);
 	// mat_print_name("Ax", Ax);
 	// mat_print_name("b", b);
 	// mat_print_eq("Ax", "b", Ax, b, MIN_COEF * 10);
 
-	// mat *Ia = mat_inv(lu);
+	// mat *Ia = mat_inv(lup);
 	// mat *aIa = mat_dot(a, Ia);
 	// mat *Iaa = mat_dot(Ia, a);
 	// mat *eye = mat_eye(5);
@@ -725,7 +725,7 @@ int	main(void)
 	// mat_print_eq("Iaa", "I", Iaa, eye, MIN_COEF);
 
 	// still not seeing the point of this tbh
-	printf("determinant of a is %f\n", mat_det(lu));
+	// printf("determinant of a is %f\n", mat_det(lup));
 
 	return (0);
 }
