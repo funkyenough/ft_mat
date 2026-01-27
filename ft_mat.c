@@ -426,6 +426,34 @@ mat	*mat_dot(mat *m1, mat *m2)
 	return (r);
 }
 
+double	mat_trace(mat *m)
+{
+	double	r;
+
+	r = 0.0;
+	if (m->num_rows != m->num_cols)
+	{
+		printf("mat_trace: Not square\n");
+		return (r);
+	}
+	for (int i = 0; i < m->num_rows; i++)
+		r += m->data[i][i];
+	return (r);
+}
+
+mat	*mat_transpose(mat *m)
+{
+	mat	*r;
+
+	r = mat_new(m->num_cols, m->num_rows);
+	for (int i = 0; i < m->num_rows; i++)
+	{
+		for (int j = 0; j < m->num_cols; j++)
+			r->data[j][i] = m->data[i][j];
+	}
+	return (r);
+}
+
 // Reduced Echelon Form (REF) satisfies the following conditions:
 // 1. All rows having only zero entries are at the bottom
 // 2. Leading entry of every non-zero row (pivot) is to the right of the pivot of every row above.
@@ -483,6 +511,26 @@ mat	*mat_rref(mat *m)
 		}
 	}
 	return (r);
+}
+
+unsigned int	mat_rank(mat *m)
+{
+	mat	*rref;
+
+	rref = mat_rref(m);
+	for (int i = rref->num_rows - 1; i >= 0; i--)
+	{
+		for (int j = rref->num_cols - 1; j >= 0; j--)
+		{
+			if (fabs(rref->data[i][j]) > MIN_COEF)
+			{
+				mat_free(rref);
+				return (i + 1);
+			}
+		}
+	}
+	mat_free(rref);
+	return (0);
 }
 
 // Kind of surprised that Andrei is doing a shallow copy here
@@ -791,13 +839,15 @@ int	main(void)
 	// mat_print(mat_row_rem(r, 0));
 	// mat_print(mat_row_swap(r, 0, 1));
 	// mat_print(mat_col_swap(r, 0, 1));
+	// mat_print_name("tr", mat_transpose(r));
 
 	mat *a = mat_rnd(5, 5, 0.0, 10.0);
 	// mat *b = mat_rnd(5, 1, 0.0, 10.0);
-	mat_print_name("a", a);
+	// mat_print_name("a", a);
 	// mat_print(b);
 	// mat_print(mat_ref(a));
 	// mat_print(mat_rref(a));
+	// printf("rank is %d\n", mat_rank(a));
 
 	// mat_lup *lup = mat_lup_solve(a);
 	// if (!lup)
@@ -832,22 +882,22 @@ int	main(void)
 	// still not seeing the point of this tbh
 	// printf("determinant of a is %f\n", mat_det(lup));
 
-	mat_qr *qr = mat_qr_solve(a);
-	mat_print_name("Q", qr->Q);
-	for (int j = 0; j < qr->Q->num_cols; j++)
-	{
-		for (int k = 0; k < j; k++)
-		{
-			double dot = 0.0;
-			for (int i = 0; i < qr->Q->num_rows; i++)
-				dot += qr->Q->data[i][j] * qr->Q->data[i][k];
-			printf("Q dot product of %d %d = %f\n", j, k, dot);
-		}
-	}
-	mat_print_name("R", qr->R);
-	mat *qr_dot = mat_dot(qr->Q, qr->R);
-	mat_print_name("QR", qr_dot);
-	mat_print_eq("Q * R", "a", qr_dot, a, MIN_COEF * 10);
+	// mat_qr *qr = mat_qr_solve(a);
+	// mat_print_name("Q", qr->Q);
+	// for (int j = 0; j < qr->Q->num_cols; j++)
+	// {
+	// 	for (int k = 0; k < j; k++)
+	// 	{
+	// 		double dot = 0.0;
+	// 		for (int i = 0; i < qr->Q->num_rows; i++)
+	// 			dot += qr->Q->data[i][j] * qr->Q->data[i][k];
+	// 		printf("Q dot product of %d %d = %f\n", j, k, dot);
+	// 	}
+	// }
+	// mat_print_name("R", qr->R);
+	// mat *qr_dot = mat_dot(qr->Q, qr->R);
+	// mat_print_name("QR", qr_dot);
+	// mat_print_eq("Q * R", "a", qr_dot, a, MIN_COEF * 10);
 
 	return (0);
 }
