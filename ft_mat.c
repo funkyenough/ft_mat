@@ -640,6 +640,37 @@ mat	*mat_inv(lup *lu)
 	return (inv);
 }
 
+// Given square matrix A, compute det(A)
+// So the straightforward way of computing determinant is quite messy
+// But LUP actually gives us an easy way to compute it by leveraging
+// a few properties
+// 1. triangular matrix det(triangle) = product of diagonal
+// 2. det(A * B) = det(A) * det(B)
+// 3. det(cA) = c^n * det(A) where n is the number of permutations
+// a => P * a = L * U
+// det(P) * det(a) = det(L) * det(U)
+// det(P) = (-1)^n, btw I don't know why the base is -1
+// det(L) = product of diagonal = 1
+// det(U) = product of diagonal
+// det(a) = det(L) * det(U) / det(P)
+// = 1 * det(U) / (-1)^n
+// Sidenote: given our design of lup_solve, we will never have det(A) = 0
+// because lup would have been null when no pivot exists
+double	mat_det(lup *lu)
+{
+	int		i;
+	double	r;
+	int		sign;
+
+	sign = (lu->num_perm % 2 == 0) ? 1 : -1;
+	r = 1.0;
+	for (i = 0; i < lu->U->num_rows; i++)
+		r *= lu->U->data[i][i];
+	return (r * sign);
+}
+
+
+
 int	main(void)
 {
 	srand(time(NULL));
@@ -682,16 +713,19 @@ int	main(void)
 	// mat_print_name("b", b);
 	// mat_print_eq("Ax", "b", Ax, b, MIN_COEF * 10);
 
-	mat *Ia = mat_inv(lu);
-	mat *aIa = mat_dot(a, Ia);
-	mat *Iaa = mat_dot(Ia, a);
-	mat *eye = mat_eye(5);
+	// mat *Ia = mat_inv(lu);
+	// mat *aIa = mat_dot(a, Ia);
+	// mat *Iaa = mat_dot(Ia, a);
+	// mat *eye = mat_eye(5);
 
-	mat_print_name("Ia", Ia);
-	mat_print_name("aIa", aIa);
-	mat_print_name("Iaa", Iaa);
-	mat_print_eq("aIa", "I", aIa, eye, MIN_COEF);
-	mat_print_eq("Iaa", "I", Iaa, eye, MIN_COEF);
+	// mat_print_name("Ia", Ia);
+	// mat_print_name("aIa", aIa);
+	// mat_print_name("Iaa", Iaa);
+	// mat_print_eq("aIa", "I", aIa, eye, MIN_COEF);
+	// mat_print_eq("Iaa", "I", Iaa, eye, MIN_COEF);
+
+	// still not seeing the point of this tbh
+	printf("determinant of a is %f\n", mat_det(lu));
 
 	return (0);
 }
