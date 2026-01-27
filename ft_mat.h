@@ -31,10 +31,17 @@ typedef struct lup_s
 
 mat					*mat_new(unsigned int num_rows, unsigned int num_cols);
 void				mat_free(mat *matrix);
+int					mat_eq(mat *m1, mat *m2, double tolerance);
 
 // UTILS
 double				_rand_internal(double min, double max);
 int					_mat_pivot_idx(mat *m, unsigned int row, unsigned int col);
 int					_mat_abs_max(mat *m, unsigned int k);
+
+void				mat_printf(mat *m, const char *d_fmt);
+void				mat_print(mat *m);
+void				mat_print_name(char *name, mat *m);
+void				mat_print_eq(char *a, char *b, mat *ma, mat *mb,
+						double tolerance);
 
 #endif

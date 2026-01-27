@@ -128,40 +128,6 @@ int	mat_eq(mat *m1, mat *m2, double tolerance)
 	return (1);
 }
 
-// Highlight 1.0 values
-void	mat_printf(mat *m, const char *d_fmt)
-{
-	double	val;
-
-	fprintf(stdout, "\n");
-	for (unsigned int i = 0; i < m->num_rows; i++)
-	{
-		for (unsigned int j = 0; j < m->num_cols; j++)
-		{
-			val = fabs(m->data[i][j]);
-			if (fabs(val) < MIN_COEF)
-				fprintf(stdout, COLOR_ZERO);
-			else if (fabs(val - 1.0) < MIN_COEF)
-				fprintf(stdout, COLOR_ONE);
-			fprintf(stdout, d_fmt, val < MIN_COEF ? 0.0 : m->data[i][j]);
-			fprintf(stdout, COLOR_RESET);
-		}
-		fprintf(stdout, "\n");
-	}
-	fprintf(stdout, "\n");
-}
-
-void	mat_print(mat *m)
-{
-	mat_printf(m, "%.1lf\t");
-}
-
-void	mat_print_name(char *name, mat *m)
-{
-	printf("%s", name);
-	mat_printf(m, "%.1lf\t");
-}
-
 mat	*mat_col_get(mat *m, unsigned int col)
 {
 	mat	*r;
@@ -441,6 +407,7 @@ mat	*mat_sub(mat *m1, mat *m2)
 	return (r);
 }
 
+// General case is O(n^3)
 mat	*mat_dot(mat *m1, mat *m2)
 {
 	mat	*r;
@@ -543,7 +510,6 @@ void	lup_free(lup *lu)
 }
 
 // Factorize a square matrix into upper and lower matrices
-// ! Purpose yet unknown to me...
 // Assuming that the matrix is not ordered in such a way that it is sorted according to pivot,
 // a separate permutation matrix P is necessary to record what permutation is performed to it.
 lup	*lup_solve(mat *m)
@@ -647,6 +613,33 @@ mat	*ls_solve(lup *lu, mat *b)
 	return (x);
 }
 
+// Given a, compute Ia s.t. a * Ia == Ia * a = I
+// Compute each col of Ia by solving the following
+// Ia[col] = ls_solve(a, I[col])
+// I can now understand why this takes so much time..
+// The O(n) of this current algorithm is
+mat	*mat_inv(lup *lu)
+{
+	unsigned int	dim;
+
+	int i, j;
+	dim = lu->L->num_cols;
+	mat *inv, *invx, *I, *Ix;
+	inv = mat_sqr(dim);
+	I = mat_eye(dim);
+	for (j = 0; j < dim; j++)
+	{
+		Ix = mat_col_get(I, j);
+		invx = ls_solve(lu, Ix);
+		for (i = 0; i < invx->num_rows; i++)
+			inv->data[i][j] = invx->data[i][0];
+		mat_free(invx);
+		mat_free(Ix);
+	}
+	mat_free(I);
+	return (inv);
+}
+
 int	main(void)
 {
 	srand(time(NULL));
@@ -683,13 +676,22 @@ int	main(void)
 	// mat_print_name("PxA", mat_dot(lu->P, a));
 	// mat_print_name("LxU", mat_dot(lu->L, lu->U));
 
-	mat *x = ls_solve(lu, b);
-	mat *Ax = mat_dot(a, x);
-	mat_print_name("Ax", Ax);
-	mat_print_name("b", b);
-	// Somehow MIN_COEF actually returns false
-	mat_eq(Ax, b, MIN_COEF
-			* 10) == 0 ? printf("Ax != b\n") : printf("Ax == b\n");
+	// mat *x = ls_solve(lu, b);
+	// mat *Ax = mat_dot(a, x);
+	// mat_print_name("Ax", Ax);
+	// mat_print_name("b", b);
+	// mat_print_eq("Ax", "b", Ax, b, MIN_COEF * 10);
+
+	mat *Ia = mat_inv(lu);
+	mat *aIa = mat_dot(a, Ia);
+	mat *Iaa = mat_dot(Ia, a);
+	mat *eye = mat_eye(5);
+
+	mat_print_name("Ia", Ia);
+	mat_print_name("aIa", aIa);
+	mat_print_name("Iaa", Iaa);
+	mat_print_eq("aIa", "I", aIa, eye, MIN_COEF);
+	mat_print_eq("Iaa", "I", Iaa, eye, MIN_COEF);
 
 	return (0);
 }
