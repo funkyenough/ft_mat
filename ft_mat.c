@@ -669,7 +669,112 @@ double	mat_det(mat_lup *lup)
 	return (r * sign);
 }
 
+// Given matrix m1 and m2, compute dot product of m1[m1col] * m2[m2col]
+double	vec_dot(mat *m1, mat *m2, unsigned int m1col, unsigned int m2col)
+{
+	double	dot;
 
+	if (m1->num_rows != m2->num_rows || m1col >= m1->num_cols
+		|| m2col >= m2->num_cols)
+		printf("Vector Dot Product Failed\n");
+	dot = 0.0;
+	for (int i = 0; i < m1->num_rows; i++)
+		dot += m1->data[i][m1col] * m2->data[i][m2col];
+	return (dot);
+}
+
+// l_2 Euclidian Norm = sqrt(a_1^2 + a_2^2 + ... + a_n^2)
+double	mat_col_l2norm(mat *m, unsigned int col)
+{
+	double	n;
+
+	n = 0.0;
+	for (int i = 0; i < m->num_rows; i++)
+		n += m->data[i][col] * m->data[i][col];
+	return (sqrt(n));
+}
+
+// Compute l2norm for all unit vectors
+mat	*mat_l2norm(mat *m)
+{
+	mat	*r;
+
+	r = mat_new(1, m->num_cols);
+	for (int j = 0; j < m->num_cols; j++)
+		r->data[0][j] = mat_col_l2norm(m, j);
+	return (r);
+}
+
+int	mat_normalize_r(mat *m)
+{
+	mat	*l2norm;
+
+	l2norm = mat_l2norm(m);
+	for (int j = 0; j < m->num_cols; j++)
+	{
+		if (l2norm->data[0][j] < MIN_COEF)
+		{
+			mat_free(l2norm);
+			return (0);
+		}
+		mat_col_mult_r(m, j, 1 / l2norm->data[0][j]);
+	}
+	mat_free(l2norm);
+	return (1);
+}
+
+mat_qr	*mat_qr_new(void)
+{
+	mat_qr	*qr;
+
+	qr = malloc(sizeof(mat_qr));
+	return (qr);
+}
+
+void	mat_qr_free(mat_qr *qr)
+{
+	free(qr->Q);
+	free(qr->R);
+	free(qr);
+}
+
+mat_qr	*mat_qr_solve(mat *m)
+{
+	mat_qr	*qr;
+	mat		*Q;
+	mat		*R;
+	double	dot;
+	double	norm;
+
+	Q = mat_cpy(m);
+	R = mat_new(m->num_rows, m->num_cols);
+	for (int j = 0; j < m->num_cols; j++)
+	{
+		for (int k = 0; k < j; k++)
+		{
+			// Compute the projection of vector k onto vector j
+			dot = vec_dot(Q, Q, j, k);
+			// Records how much column j points in the direction of column k
+			R->data[k][j] = dot;
+			// Subtract such projection from the vector to make them orthogonal to each other
+			for (int i = 0; i < m->num_rows; i++)
+				Q->data[i][j] -= dot * Q->data[i][k];
+		}
+		norm = mat_col_l2norm(Q, j);
+		if (norm < MIN_COEF)
+		{
+			mat_free(Q);
+			mat_free(R);
+			return (NULL);
+		}
+		R->data[j][j] = norm;
+		mat_col_mult_r(Q, j, 1.0 / norm);
+	}
+	qr = mat_qr_new();
+	qr->Q = Q;
+	qr->R = R;
+	return (qr);
+}
 
 int	main(void)
 {
@@ -688,8 +793,8 @@ int	main(void)
 	// mat_print(mat_col_swap(r, 0, 1));
 
 	mat *a = mat_rnd(5, 5, 0.0, 10.0);
-	mat *b = mat_rnd(5, 1, 0.0, 10.0);
-	// mat_print(a);
+	// mat *b = mat_rnd(5, 1, 0.0, 10.0);
+	mat_print_name("a", a);
 	// mat_print(b);
 	// mat_print(mat_ref(a));
 	// mat_print(mat_rref(a));
@@ -726,6 +831,23 @@ int	main(void)
 
 	// still not seeing the point of this tbh
 	// printf("determinant of a is %f\n", mat_det(lup));
+
+	mat_qr *qr = mat_qr_solve(a);
+	mat_print_name("Q", qr->Q);
+	for (int j = 0; j < qr->Q->num_cols; j++)
+	{
+		for (int k = 0; k < j; k++)
+		{
+			double dot = 0.0;
+			for (int i = 0; i < qr->Q->num_rows; i++)
+				dot += qr->Q->data[i][j] * qr->Q->data[i][k];
+			printf("Q dot product of %d %d = %f\n", j, k, dot);
+		}
+	}
+	mat_print_name("R", qr->R);
+	mat *qr_dot = mat_dot(qr->Q, qr->R);
+	mat_print_name("QR", qr_dot);
+	mat_print_eq("Q * R", "a", qr_dot, a, MIN_COEF * 10);
 
 	return (0);
 }
