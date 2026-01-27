@@ -733,8 +733,8 @@ mat_qr	*mat_qr_new(void)
 
 void	mat_qr_free(mat_qr *qr)
 {
-	free(qr->Q);
-	free(qr->R);
+	mat_free(qr->Q);
+	mat_free(qr->R);
 	free(qr);
 }
 
