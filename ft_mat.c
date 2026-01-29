@@ -44,8 +44,6 @@ mat	*mat_cpy(mat *m)
 	mat	*r;
 
 	r = mat_new(m->num_rows, m->num_cols);
-	r->num_rows = m->num_rows;
-	r->num_cols = m->num_cols;
 	r->is_square = m->is_square;
 	for (unsigned int i = 0; i < m->num_rows; i++)
 	{
@@ -97,8 +95,8 @@ mat	*mat_fromfile(FILE *f)
 
 	num_rows = 0;
 	num_cols = 0;
-	fscanf(f, "%d", &num_rows);
-	fscanf(f, "%d", &num_cols);
+	fscanf(f, "%u", &num_rows);
+	fscanf(f, "%u", &num_cols);
 	m = mat_new(num_rows, num_cols);
 	for (unsigned int i = 0; i < m->num_rows; i++)
 	{
