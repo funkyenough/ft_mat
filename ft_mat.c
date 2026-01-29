@@ -874,17 +874,20 @@ double	mat_off_diag_sum(mat *m)
 
 // Computes eigenvalues using basic QR iteration (no shift).
 // Returns NULL if matrix has complex eigenvalues (detected by divergence).
-mat	*mat_eigenvalues(mat *m)
+mat_eig	*mat_eig_solve(mat *m)
 {
 	mat		*values;
+	mat		*vectors;
 	mat		*A;
 	mat_qr	*qr;
 	mat		*na;
-	int		n;
+	int		dim;
 	double	prev_sum;
 	double	curr_sum;
+	mat_eig	*eig;
 
-	n = m->num_rows;
+	dim = m->num_rows;
+	vectors = mat_eye(dim);
 	A = mat_cpy(m);
 	prev_sum = mat_off_diag_sum(A);
 	while (prev_sum > MIN_COEF)
@@ -893,6 +896,7 @@ mat	*mat_eigenvalues(mat *m)
 		na = mat_dot(qr->R, qr->Q);
 		mat_free(A);
 		A = na;
+		vectors = mat_dot(vectors, qr->Q);
 		mat_qr_free(qr);
 		curr_sum = mat_off_diag_sum(A);
 		if (curr_sum >= prev_sum)
@@ -903,11 +907,12 @@ mat	*mat_eigenvalues(mat *m)
 		}
 		prev_sum = curr_sum;
 	}
-	values = mat_new(n, 1);
-	for (int i = 0; i < n; i++)
+	values = mat_new(dim, 1);
+	for (int i = 0; i < dim; i++)
 		values->data[i][0] = A->data[i][i];
 	mat_free(A);
-	return (values);
+	eig = mat_eig_new(values, vectors);
+	return (eig);
 }
 
 int	main(void)
@@ -975,11 +980,11 @@ int	main(void)
 	// mat_print_name("QR", qr_dot);
 	// mat_print_eq("Q * R", "a", qr_dot, a, MIN_COEF * 10);
 
-	mat *eig = mat_eigenvalues(a);
+	mat_eig *eig = mat_eig_solve(a);
 	if (eig)
-		mat_print_name("Eigenvalues", eig);
-	else
-		printf("Eigenvalues: failed (complex or singular)\n");
-
+	{
+		mat_print_name("eigenvalues", eig->values);
+		mat_print_name("eigenvectors", eig->vectors);
+	}
 	return (0);
 }
