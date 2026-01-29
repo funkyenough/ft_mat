@@ -824,6 +824,92 @@ mat_qr	*mat_qr_solve(mat *m)
 	return (qr);
 }
 
+mat_eig	*mat_eig_new(mat *values, mat *vectors)
+{
+	mat_eig	*eig;
+
+	eig = malloc(sizeof(mat_eig));
+	eig->values = values;
+	eig->vectors = vectors;
+	return (eig);
+}
+
+void	mat_eig_free(mat_eig *eig)
+{
+	mat_free(eig->values);
+	mat_free(eig->vectors);
+	free(eig);
+}
+
+double	mat_off_diag_sum(mat *m)
+{
+	double	sum;
+
+	sum = 0.0;
+	for (int i = 0; i < m->num_rows; i++)
+		for (int j = 0; j < i; j++)
+			sum += fabs(m->data[i][j]);
+	return (sum);
+}
+// Given A ∈ n * n, x ∈ n, l ∈ R
+// Find l st Av = lv, where v is eigen vector, and l is eigen value
+//
+// Intuition:
+// Consider A as a linear transformation from vector space V -> V
+// eigen vector v is not rotated under transformation,
+// but only stretched or squished by a scalar l.
+//
+// Mathematically:
+// Av = lv = l * I * v = (lI)v (I as identity matrix)
+// Av - (lI)v = (A - lI)v = 0
+// Assuming that the eigen vector v is non-zero,
+// determinant of (A - lI) must be zero.
+// Therefore, we compute the  det(A - lI) = 0, where we subract A[i][i] by l.
+// We compute the eigen value by computing the roots of the polynomial of l.
+//
+// Computationally, finding roots of polynomial is very expensive
+// we leverage 2 primitives
+// 1. QR Decomposition to compute the inverse of A
+//
+
+// Computes eigenvalues using basic QR iteration (no shift).
+// Returns NULL if matrix has complex eigenvalues (detected by divergence).
+mat	*mat_eigenvalues(mat *m)
+{
+	mat		*values;
+	mat		*A;
+	mat_qr	*qr;
+	mat		*na;
+	int		n;
+	double	prev_sum;
+	double	curr_sum;
+
+	n = m->num_rows;
+	A = mat_cpy(m);
+	prev_sum = mat_off_diag_sum(A);
+	while (prev_sum > MIN_COEF)
+	{
+		qr = mat_qr_solve(A);
+		na = mat_dot(qr->R, qr->Q);
+		mat_free(A);
+		A = na;
+		mat_qr_free(qr);
+		curr_sum = mat_off_diag_sum(A);
+		if (curr_sum >= prev_sum)
+		{
+			printf("mat_eigenvalues: diverging (complex eigenvalues?)\n");
+			mat_free(A);
+			return (NULL);
+		}
+		prev_sum = curr_sum;
+	}
+	values = mat_new(n, 1);
+	for (int i = 0; i < n; i++)
+		values->data[i][0] = A->data[i][i];
+	mat_free(A);
+	return (values);
+}
+
 int	main(void)
 {
 	srand(time(NULL));
@@ -841,9 +927,9 @@ int	main(void)
 	// mat_print(mat_col_swap(r, 0, 1));
 	// mat_print_name("tr", mat_transpose(r));
 
-	mat *a = mat_rnd(5, 5, 0.0, 10.0);
+	mat *a = mat_rnd(3, 3, 0.0, 10.0);
 	// mat *b = mat_rnd(5, 1, 0.0, 10.0);
-	// mat_print_name("a", a);
+	mat_print_name("a", a);
 	// mat_print(b);
 	// mat_print(mat_ref(a));
 	// mat_print(mat_rref(a));
@@ -884,20 +970,16 @@ int	main(void)
 
 	// mat_qr *qr = mat_qr_solve(a);
 	// mat_print_name("Q", qr->Q);
-	// for (int j = 0; j < qr->Q->num_cols; j++)
-	// {
-	// 	for (int k = 0; k < j; k++)
-	// 	{
-	// 		double dot = 0.0;
-	// 		for (int i = 0; i < qr->Q->num_rows; i++)
-	// 			dot += qr->Q->data[i][j] * qr->Q->data[i][k];
-	// 		printf("Q dot product of %d %d = %f\n", j, k, dot);
-	// 	}
-	// }
 	// mat_print_name("R", qr->R);
 	// mat *qr_dot = mat_dot(qr->Q, qr->R);
 	// mat_print_name("QR", qr_dot);
 	// mat_print_eq("Q * R", "a", qr_dot, a, MIN_COEF * 10);
+
+	mat *eig = mat_eigenvalues(a);
+	if (eig)
+		mat_print_name("Eigenvalues", eig);
+	else
+		printf("Eigenvalues: failed (complex or singular)\n");
 
 	return (0);
 }

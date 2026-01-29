@@ -35,6 +35,12 @@ typedef struct mat_qr_s
 	mat				*R;
 }					mat_qr;
 
+typedef struct mat_eig_s
+{
+	mat				*values;
+	mat				*vectors;
+}					mat_eig;
+
 mat					*mat_new(unsigned int num_rows, unsigned int num_cols);
 void				mat_free(mat *matrix);
 int					mat_eq(mat *m1, mat *m2, double tolerance);
